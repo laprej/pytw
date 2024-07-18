@@ -1,6 +1,6 @@
-from queue import PriorityQueue as PQ
+import heapq
 
-from .event import Event
+from pytw.event import Event
 
 
 class LogicalProcess:
@@ -14,10 +14,19 @@ class LogicalProcess:
     """
 
     def __init__(self) -> None:
-        self.event_list = PQ[Event]()
+        self.event_list: list[Event] = []
 
     def add_event(self, e: Event):
-        self.event_list.put(e)
+        heapq.heappush(self.event_list, e)
 
     def next_event(self):
-        return self.event_list.get()
+        try:
+            return heapq.heappop(self.event_list)
+        except IndexError:
+            return None
+
+    def peek(self):
+        try:
+            return self.event_list[0]
+        except IndexError:
+            return None

@@ -12,4 +12,6 @@ class Event:
             self.dst_lp = dst
 
     def __lt__(self, other):
+        if other is None:
+            return self.timestamp
         return self.timestamp < other.timestamp

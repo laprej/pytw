@@ -1,6 +1,7 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
 from pytw.event import Event
+from pytw.logical_process import LogicalProcess
 
 
 class Engine(ABC):
@@ -15,8 +16,10 @@ class Engine(ABC):
 
     def __init__(self) -> None:
         self.engine_type = None
+        self.lps: list[LogicalProcess] = []
         super().__init__()
 
+    @abstractmethod
     def next_event(self) -> Event:
         pass
 
