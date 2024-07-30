@@ -1,3 +1,5 @@
+import mpi4py
+
 from pytw.engine import Event
 from pytw.model import Model
 
@@ -14,4 +16,16 @@ class PholdMessage(Event):
 
 
 class Phold(Model):
-    pass
+    def initialize(self):
+        super().initialize()
+
+    def event_handler(self, e: Event):
+        super().event_handler(e)
+
+    def reverse_event_handler(self, e: Event):
+        super().reverse_event_handler(e)
+        comm.abort()
+
+
+if __name__ == "__main__":
+    foo = Phold()

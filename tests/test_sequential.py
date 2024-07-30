@@ -2,14 +2,17 @@ from random import random
 
 import pytest
 
+from pytw.engine import Engine
 from pytw.event import Event
 from pytw.logical_process import LogicalProcess
+from pytw.mpi import MPIBase
 from pytw.sequential import Sequential
 
 
 @pytest.fixture
 def PE():
-    pe = Sequential()
+    engine = MPIBase(PE)
+    pe = Sequential(engine)
 
     lp_count = 16
     element_count = 10
