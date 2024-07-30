@@ -2,15 +2,17 @@ from mpi4py import MPI
 
 from pytw.engine import Engine
 from pytw.event import Event
+from pytw.mpi import MPIBase
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
 
-class Sequential(Engine):
-    def __init__(self) -> None:
-        super().__init__()
+class Sequential(MPIBase):
+    def __init__(self, e: Engine) -> None:
+        super().__init__(e)
+        self.lps = []
 
         if size > 1:
             # Sequential can only have a single rank
