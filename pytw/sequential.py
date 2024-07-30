@@ -4,19 +4,15 @@ from pytw.engine import Engine
 from pytw.event import Event
 from pytw.mpi import MPIBase
 
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-size = comm.Get_size()
-
 
 class Sequential(MPIBase):
     def __init__(self, e: Engine) -> None:
         super().__init__(e)
         self.lps = []
 
-        if size > 1:
+        if self.size > 1:
             # Sequential can only have a single rank
-            comm.Abort()
+            self.comm.Abort()
 
     def next_event(self) -> Event:
         min = self.lps[0].peek()
