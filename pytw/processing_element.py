@@ -1,13 +1,12 @@
-from typing import List
-
-from pytw.logical_process import LogicalProcess
+from pytw.mpi import MPIBase
 
 
-class ProcessingElement:
+class ProcessingElement(MPIBase):
     """Processing Element (PE)
 
     PEs can be thought of as a CPU containing multiple Logical Processes (LPs).
     """
 
     def __init__(self) -> None:
-        self.lp = List[LogicalProcess]
+        super().__init__()
+        self.lp = []

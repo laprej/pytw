@@ -1,6 +1,7 @@
 import heapq
 
 from pytw.event import Event
+from pytw.processing_element import ProcessingElement as PE
 
 
 class LogicalProcess:
@@ -13,7 +14,9 @@ class LogicalProcess:
     nondecreasing time stamp order.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, lpid, pe: PE) -> None:
+        self.lp_id = lpid
+        self.pe = pe
         self.event_list: list[Event] = []
 
     def add_event(self, e: Event):
@@ -30,3 +33,17 @@ class LogicalProcess:
             return self.event_list[0]
         except IndexError:
             return None
+
+    def send_event(self, e: Event):
+        """Send event to e.dst_lp
+
+        Args:
+            e (Event): Event to send.
+        """
+        assert e.dst_lp != None
+        assert e.src_lp == None
+
+        e.src_lp = self.lp_id
+        # don't call isend directly here
+        # instead place the event in a buffer
+        self.pe.comm.isend(e, 0)
