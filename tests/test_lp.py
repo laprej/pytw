@@ -9,7 +9,7 @@ from pytw.logical_process import LogicalProcess
 
 @pytest.fixture
 def LP():
-    lp = LogicalProcess()
+    lp = LogicalProcess("a", 0)
     for _ in range(3):
         e = Event(ts=random.random())
         lp.add_event(e)

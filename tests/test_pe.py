@@ -16,11 +16,11 @@ def PE():
 
     lp_count = 16
     element_count = 10
-    for _ in range(lp_count):
-        lp = LogicalProcess()
+    for i in range(lp_count):
+        lp = LogicalProcess("abcdefghijklmnopqrstuvwxyz"[i], pe)
         for _ in range(element_count):
             e = Event(ts=random())
             lp.add_event(e)
-        pe.lps.append(lp)
+        pe.lp.append(lp)
 
     yield pe
