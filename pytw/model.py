@@ -1,4 +1,9 @@
+import importlib
+import os
+import sys
 from abc import ABC, abstractmethod
+
+import click
 
 from pytw.event import Event
 
@@ -32,3 +37,13 @@ class Model(ABC):
             e (Event): The event to reverse.
         """
         pass
+
+
+@click.command()
+@click.option("-m", "--model", type=click.Path(exists=True))
+def cli(model):
+    click.echo(sys.path)
+    sys.path.append("./pytw")
+    click.echo(sys.path)
+    click.echo(model)
+    m = importlib.import_module(model)
