@@ -6,6 +6,8 @@ from abc import ABC, abstractmethod
 import click
 
 from pytw.event import Event
+from pytw.logical_process import LogicalProcess
+from pytw.state import State
 
 
 class Model(ABC):
@@ -19,7 +21,7 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def event_handler(self, e: Event):
+    def event_handler(self, e: Event, s: State, lp: LogicalProcess):
         """Forward event handler.
 
         Args:
