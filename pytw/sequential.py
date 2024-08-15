@@ -3,9 +3,9 @@ from pytw.event import Event
 from pytw.mpi import MPIBase
 
 
-class Sequential(MPIBase):
-    def __init__(self, e: Engine) -> None:
-        super().__init__(e)
+class Sequential(Engine):
+    def __init__(self) -> None:
+        super().__init__("Sequential")
         self.lp = []
 
         if self.size > 1:

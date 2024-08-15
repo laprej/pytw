@@ -5,14 +5,14 @@ import pytest
 from pytw.event import Event
 from pytw.logical_process import LogicalProcess
 from pytw.mpi import MPIBase
-from pytw.processing_element import ProcessingElement as PE
+from pytw.processing_element import ProcessingElement
 from pytw.sequential import Sequential
 
 
 @pytest.fixture
 def PE():
-    engine = MPIBase(PE)
-    pe = Sequential(engine)
+    engine = Sequential()
+    pe = ProcessingElement(engine)
 
     lp_count = 16
     element_count = 10
