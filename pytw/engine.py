@@ -20,10 +20,3 @@ class Engine(MPIBase, ABC):
         self.engine_type = et
         if self.engine_type not in ["Sequential", "Conservative", "Optimistic"]:
             raise RuntimeError("bad engine type")
-
-    @abstractmethod
-    def next_event(self) -> Event:
-        pass
-
-    def start(self) -> None:
-        pass
