@@ -24,11 +24,10 @@ class Phold(Model):
         super().initialize()
 
     def event_handler(self, e: Event, s: State, lp: LogicalProcess):
-        super().event_handler(e)
+        pass
 
-    def reverse_event_handler(self, e: Event):
-        super().reverse_event_handler(e)
-        comm.abort()
+    def reverse_event_handler(self, e: Event, s: State, lp: LogicalProcess):
+        lp.pe.comm.Abort()
 
 
 if __name__ == "__main__":

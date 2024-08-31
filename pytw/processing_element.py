@@ -1,5 +1,6 @@
 from pytw.engine import Engine
 from pytw.event import Event
+from pytw.logical_process import LogicalProcess as LP
 from pytw.mpi import MPIBase
 
 
@@ -12,7 +13,7 @@ class ProcessingElement(MPIBase):
     def __init__(self, e: Engine) -> None:
         super().__init__()
         self.engine = e
-        self.lp = []
+        self.lp: list[LP] = []
 
     def next_event(self) -> Event:
         min = self.lp[0].peek()

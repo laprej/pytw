@@ -30,7 +30,7 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def reverse_event_handler(self, e: Event):
+    def reverse_event_handler(self, e: Event, s: State, lp: LogicalProcess):
         """Reverse event handler
 
         Required only for Optimistic engine.

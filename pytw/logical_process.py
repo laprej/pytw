@@ -1,7 +1,6 @@
 import heapq
 
 from pytw.event import Event
-from pytw.processing_element import ProcessingElement as PE
 
 
 class LogicalProcess:
@@ -14,7 +13,7 @@ class LogicalProcess:
     nondecreasing time stamp order.
     """
 
-    def __init__(self, lpid, pe: PE) -> None:
+    def __init__(self, lpid, pe) -> None:
         self.lp_id = lpid
         self.pe = pe
         self.event_list: list[Event] = []
