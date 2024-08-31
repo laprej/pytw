@@ -1,11 +1,28 @@
 # see https://github.com/ROSS-org/ROSS/blob/master/core/network-mpi.c
 # for inspiration for this implementation
+from dataclasses import dataclass
+
+from mpi4py import MPI
 
 from pytw.event import Event
 
 
-def test_q(a, b, c):
+@dataclass
+class EventStuff:
+    e: Event
+    req: MPI.Request
+    status: MPI.Status
+
+
+posted_sends: list[Event] = []
+
+
+def send_finish():
     pass
+
+
+def test_q(a, b, c) -> int:
+    return 0
 
 
 def send_begin(a):
