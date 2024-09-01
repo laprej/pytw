@@ -16,9 +16,9 @@ class Model(ABC):
     Defines the methods required for all models to implement.
     """
 
-    @abstractmethod
-    def initialize(self):
-        pass
+    def __init__(self, s: State, lp: LogicalProcess) -> None:
+        self.state = s
+        self.lp = lp
 
     @abstractmethod
     def event_handler(self, e: Event, s: State, lp: LogicalProcess):

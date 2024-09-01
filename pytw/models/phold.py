@@ -20,15 +20,16 @@ class PholdMessage(Event):
 
 
 class Phold(Model):
-    def initialize(self):
-        super().initialize()
+    def __init__(self, s, lp) -> None:
+        super().__init__(s, lp)
+        self.phold_start_events = 5
+
+        for i in range(self.phold_start_events):
+            e = Event(random(), self.lp, self.lp)
+            self.lp.send_event(e)
 
     def event_handler(self, e: Event, s: State, lp: LogicalProcess):
         pass
 
     def reverse_event_handler(self, e: Event, s: State, lp: LogicalProcess):
         lp.pe.comm.Abort()
-
-
-if __name__ == "__main__":
-    foo = Phold()

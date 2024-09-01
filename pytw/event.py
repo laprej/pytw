@@ -4,7 +4,7 @@ from typing import Optional
 
 
 class Event:
-    def __init__(self, ts: Optional[float] = None, src: Optional[LP] = None, dst: Optional[LP] = None) -> None:
+    def __init__(self, ts: float, src=None, dst=None) -> None:
         self.timestamp = ts
         self.src_lp = src
         self.dst_lp = dst

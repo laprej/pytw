@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from mpi4py import MPI
 
 from pytw.event import Event
+from pytw.processing_element import ProcessingElement as PE
 
 
 @dataclass
@@ -17,7 +18,7 @@ class EventStuff:
 posted_sends: list[Event] = []
 
 
-def send_finish():
+def send_finish() -> None:
     pass
 
 
@@ -25,8 +26,8 @@ def test_q(a, b, c) -> int:
     return 0
 
 
-def send_begin(a):
-    pass
+def send_begin(a) -> int:
+    return 0
 
 
 def pytw_net_send(e: Event):
@@ -35,7 +36,7 @@ def pytw_net_send(e: Event):
     #   changed = test_q(&posted_sends, me, send_finish);
     #   changed |= send_begin(me);
     # } while (changed);
-    me = e.src_lp.pe
+    me = e.src_lp.pe  # type: PE
     while True:
         changed = test_q(posted_sends, me, send_finish)
         changed |= send_begin(me)
