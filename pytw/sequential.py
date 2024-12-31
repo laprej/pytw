@@ -16,7 +16,7 @@ class Sequential(Engine):
             # Sequential can only have a single rank
             comm.Abort()
 
-    def next_event(self) -> Event:
+    def process_event(self) -> Event:
         min = self.lps[0].peek()
         mindex = 0
         # loop over all LPs and find the lowest timestamp event

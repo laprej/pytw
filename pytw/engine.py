@@ -20,7 +20,7 @@ class Engine(ABC):
         super().__init__()
 
     @abstractmethod
-    def next_event(self) -> Event:
+    def process_event(self) -> Event:
         pass
 
     def start(self) -> None:
