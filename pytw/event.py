@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import random
 from typing import Optional
 
 
 class Event:
     def __init__(self, ts: float, src=None, dst=None) -> None:
+        if ts == None:
+            ts = random.random()
         self.timestamp = ts
         self.src_lp = src
         self.dst_lp = dst

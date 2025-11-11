@@ -1,3 +1,5 @@
+from queue import Queue
+
 from pytw.engine import Engine
 from pytw.event import Event
 from pytw.mpi import MPIBase
@@ -13,6 +15,7 @@ class ProcessingElement(MPIBase):
         super().__init__()
         self.engine = e
         self.lp: list = []
+        self.buffer = Queue()
 
     def next_event(self) -> Event:
         min = self.lp[0].peek()

@@ -3,13 +3,14 @@ import heapq
 from pytw.event import Event
 from pytw.processing_element import ProcessingElement
 
+
 class LogicalProcess:
     """LogicalProcess (LP)
 
     NOTE: From Fujimoto pg. 52:
     Local Causality Constrain: A discrete-event simulation, consisting of logical
     processes (LPs) that interact exclusively by exchanging time stamped messages
-    obeys the local causality constrain if and only if each LP processes events in
+    obeys the local causality constraint if and only if each LP processes events in
     nondecreasing time stamp order.
     """
 
@@ -44,4 +45,5 @@ class LogicalProcess:
         e.src_lp = self.lp_id
         # don't call isend directly here
         # instead place the event in a buffer
-        self.pe.comm.isend(e, 0)
+        # self.pe.comm.isend(e, 0)
+        self.pe.buffer.put(e)
