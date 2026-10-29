@@ -19,6 +19,7 @@ class Model(ABC):
     def __init__(self, s: State, lp: LogicalProcess) -> None:
         self.state = s
         self.lp = lp
+        lp.model = self
 
     @abstractmethod
     def event_handler(self, e: Event, s: State, lp: LogicalProcess):

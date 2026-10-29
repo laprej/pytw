@@ -21,6 +21,6 @@ def PE():
         for _ in range(element_count):
             e = Event(ts=random())
             lp.add_event(e)
-        pe.lp.append(lp)
+        pe.add_lp(lp)
 
     yield pe

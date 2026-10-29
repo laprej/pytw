@@ -15,18 +15,33 @@ class ProcessingElement(MPIBase):
         super().__init__()
         self.engine = e
         self.lp: list = []
+        self.lp_map: dict = {}
         self.buffer = Queue()
 
-    def next_event(self) -> Event:
-        min = self.lp[0].peek()
-        mindex = 0
-        # loop over all LPs and find the lowest timestamp event
-        for i in range(len(self.lp)):
-            ts = self.lp[i].peek()
-            if ts is None:
-                continue
-            if ts < min:
-                mindex = i
-                min = self.lp[i].peek()
+    def add_lp(self, lp) -> None:
+        self.lp.append(lp)
+        self.lp_map[lp.lp_id] = lp
 
-        return self.lp[mindex].next_event()
+    def peek(self):
+        """Return the LP holding the lowest timestamp event, or None if all are empty."""
+        min_lp = None
+        # loop over all LPs and find the lowest timestamp event
+        for lp in self.lp:
+            e = lp.peek()
+            if e is None:
+                continue
+            if min_lp is None or e < min_lp.peek():
+                min_lp = lp
+        return min_lp
+
+    def next_event(self) -> Event:
+        lp = self.peek()
+        if lp is None:
+            return None
+        return lp.next_event()
+
+    def deliver(self) -> None:
+        """Move buffered events into their destination LP's event list."""
+        while not self.buffer.empty():
+            e = self.buffer.get()
+            self.lp_map[e.dst_lp].add_event(e)
