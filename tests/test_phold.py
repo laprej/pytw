@@ -2,20 +2,12 @@ import copy
 
 import pytest
 
-from pytw.logical_process import LogicalProcess as LP
 from pytw.models.phold import Phold, PholdState
-from pytw.processing_element import ProcessingElement
-from pytw.sequential import Sequential
+from pytw.runner import build as runner_build
 
 
 def build(nlps=16, seed=0, **kwargs):
-    engine = Sequential()
-    pe = ProcessingElement(engine)
-    for i in range(nlps):
-        lp = LP(i, pe, seed=seed * nlps + i)
-        pe.add_lp(lp)
-        Phold(PholdState(), lp, nlps, **kwargs)
-    return engine, pe
+    return runner_build(Phold, PholdState, nlps, seed, kwargs)
 
 
 def test_phold_sequential():
