@@ -1,4 +1,4 @@
-Communication Patterns
+# Communication Patterns
 
   _______MPI_______
  /                 \
