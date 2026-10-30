@@ -2,25 +2,13 @@ from random import random
 
 import pytest
 
+from pytw.engine import Engine
 from pytw.event import Event
 from pytw.logical_process import LogicalProcess
+from pytw.mpi import MPIBase
 from pytw.sequential import Sequential
 
-
-@pytest.fixture
-def PE():
-    pe = Sequential()
-
-    lp_count = 16
-    element_count = 10
-    for _ in range(lp_count):
-        lp = LogicalProcess()
-        for _ in range(element_count):
-            e = Event(ts=random())
-            lp.add_event(e)
-        pe.lps.append(lp)
-
-    yield pe
+from .test_pe import PE
 
 
 def test_seq(PE):
@@ -29,3 +17,9 @@ def test_seq(PE):
     while last := PE.process_event():
         assert prev.timestamp <= last.timestamp
         prev = last
+
+
+def test_send(PE):
+    """Send an event from one LP to another."""
+    e = Event(random(), dst="b")
+    PE.lp[0].send_event(e)
