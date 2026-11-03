@@ -2,6 +2,7 @@ import pickle
 import shutil
 import subprocess
 import sys
+import warnings
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,11 @@ import pytest
 from pytw.models.phold import Phold, PholdState
 from pytw.optimistic import Optimistic
 from pytw.runner import build as runner_build
+
+HAVE_MPIEXEC = shutil.which("mpiexec") is not None
+if not HAVE_MPIEXEC:
+    # a plain skip is easy to miss, and these are the only tests that exercise rollback
+    warnings.warn("mpiexec not found: skipping the MPI tests, so rollback between ranks is untested")
 
 
 def build(engine=None, nlps=16, seed=0, **kwargs):
@@ -32,22 +38,13 @@ def snapshot(pe):
 @pytest.mark.parametrize("batch", [1, 8, 64])
 @pytest.mark.parametrize("remote", [0.0, 0.25, 1.0])
 def test_matches_sequential(batch, remote, gvt_interval):
-    """Rollbacks must leave every LP exactly where the sequential engine does."""
+    """On one rank, events are processed in timestamp order, so nothing is rolled back."""
     seq_engine, seq_pe = build(percent_remote=remote)
     opt_engine, opt_pe = build(Optimistic(batch=batch, gvt_interval=gvt_interval), percent_remote=remote)
 
     assert opt_engine.run(opt_pe, 50.0) == seq_engine.run(seq_pe, 50.0)
     assert snapshot(opt_pe) == snapshot(seq_pe)
-    if remote > 0:
-        # otherwise the test isn't exercising rollback at all
-        assert sum(lp.events_rolled_back for lp in opt_pe.lp) > 0
-
-
-def test_no_remote_no_rollback():
-    """With no remote events an LP can never receive a straggler."""
-    engine, pe = build(Optimistic(), percent_remote=0.0)
-    engine.run(pe, 50.0)
-    assert sum(lp.rollbacks for lp in pe.lp) == 0
+    assert sum(lp.rollbacks for lp in opt_pe.lp) == 0
 
 
 def test_gvt_reaches_end():
@@ -70,11 +67,11 @@ def test_fossil_collection_bounds_history():
     assert peaks[1] < 1.5 * peaks[0]
 
 
-@pytest.mark.skipif(shutil.which("mpiexec") is None, reason="needs mpiexec")
+@pytest.mark.skipif(not HAVE_MPIEXEC, reason="needs mpiexec")
 @pytest.mark.parametrize("ranks", [2, 4])
-@pytest.mark.parametrize("batch, remote, gvt_interval", [(8, 0.25, 1), (1, 1.0, 1), (8, 0.25, 4)])
+@pytest.mark.parametrize("batch, remote, gvt_interval", [(16, 0.25, 16), (1, 1.0, 1), (64, 0.25, 4)])
 def test_mpi_matches_sequential(tmp_path, ranks, batch, remote, gvt_interval):
-    """Across ranks, with events and anti-messages over MPI, every LP still ends where sequential does."""
+    """Stragglers and anti-messages between ranks still leave every LP where sequential does."""
     out = tmp_path / "snapshot.pkl"
     subprocess.run(
         [
@@ -96,7 +93,9 @@ def test_mpi_matches_sequential(tmp_path, ranks, batch, remote, gvt_interval):
         cwd=Path(__file__).parent.parent,
     )
     with open(out, "rb") as f:
-        committed, lps = pickle.load(f)
+        committed, rolled_back, lps = pickle.load(f)
+    # otherwise the test isn't exercising rollback at all
+    assert rolled_back > 0
 
     seq_engine, seq_pe = build(percent_remote=remote)
     assert committed == seq_engine.run(seq_pe, 50.0)

@@ -8,17 +8,17 @@ from pytw.engine import Engine
 class Optimistic(Engine):
     """Time Warp, on one or more MPI ranks.
 
-    Rather than processing events in global timestamp order, each rank's LPs take
-    turns processing up to `batch` events each, so an LP can run ahead of the
-    others and receive stragglers from LPs that are behind it.  Stragglers and
-    cancellations roll the LP back (see LogicalProcess.rollback).  GVT is
-    recomputed after every `gvt_interval` rounds of turns; processed events older
+    Each rank processes its own events in timestamp order, as ROSS does, so
+    stragglers only come from other ranks that are behind it; on a single rank
+    nothing is ever rolled back.  Stragglers and cancellations roll the LP back
+    (see LogicalProcess.rollback).  The rank polls the network every `batch`
+    events and recomputes GVT every `gvt_interval` batches; processed events older
     than GVT are fossil collected, and the run ends once GVT reaches end_time.
     A longer interval means fewer blocking GVT computations, but more history
     held between them.
     """
 
-    def __init__(self, batch: int = 8, gvt_interval: int = 1) -> None:
+    def __init__(self, batch: int = 16, gvt_interval: int = 16) -> None:
         super().__init__("Optimistic")
         self.batch = batch
         self.gvt_interval = gvt_interval
@@ -42,7 +42,8 @@ class Optimistic(Engine):
                 break
         pe.complete_sends()
 
-        lvt = min((e.timestamp for lp in pe.lp if (e := lp.peek()) is not None), default=math.inf)
+        lp = pe.peek()
+        lvt = math.inf if lp is None else lp.peek().timestamp
         return self.comm.allreduce(lvt, op=MPI.MIN)
 
     def run(self, pe, end_time: float) -> int:
@@ -61,15 +62,14 @@ class Optimistic(Engine):
                 break
 
             for _ in range(self.gvt_interval):
-                for lp in pe.lp:
-                    pe.poll()
-                    for _ in range(self.batch):
-                        e = lp.peek()
-                        if e is None or e.timestamp >= end_time:
-                            break
-                        lp.next_event()
-                        lp.now = e.timestamp
-                        lp.forward(e)
-                        pe.deliver()
+                pe.poll()
+                for _ in range(self.batch):
+                    lp = pe.peek()
+                    if lp is None or lp.peek().timestamp >= end_time:
+                        break
+                    e = lp.next_event()
+                    lp.now = e.timestamp
+                    lp.forward(e)
+                    pe.deliver()
 
         return self.comm.allreduce(sum(lp.events_processed for lp in pe.lp))

@@ -1,3 +1,4 @@
+import heapq
 import itertools
 from queue import Queue
 
@@ -32,25 +33,64 @@ class ProcessingElement(MPIBase):
         self.msgs_sent = 0
         self.msgs_recvd = 0
         self.requests: list = []
+        # (head timestamp, index into self.lp) per LP, so peek() needn't scan every LP;
+        # built on the first peek(), since only the sequential engine uses it
+        self.heads = None
 
     def rank_of(self, lp_id) -> int:
         return 0 if self.size == 1 else lp_id % self.size
 
     def add_lp(self, lp) -> None:
+        lp.pe_index = len(self.lp)
         self.lp.append(lp)
         self.lp_map[lp.lp_id] = lp
+        # rebuilt with the new LP on the next peek()
+        self.heads = None
 
     def peek(self):
-        """Return the LP holding the lowest timestamp event, or None if all are empty."""
-        min_lp = None
-        # loop over all LPs and find the lowest timestamp event
-        for lp in self.lp:
+        """Return the LP holding the lowest timestamp event, or None if all are empty.
+
+        self.heads is maintained lazily.  Each LP with events has one live entry,
+        keyed by lp.head_key, which is never later than its head:
+        - when the head moves earlier (add_event), head_added() pushes a new live
+          entry, and the LP's previous one is superseded and dropped when it reaches
+          the top;
+        - when the head moves later (an event is popped or purged), the live entry
+          is left behind and moved to the new head here when it reaches the top.
+        The first live entry that matches its LP's head is then the global minimum.
+        """
+        if self.heads is None:
+            self.heads = []
+            for i, lp in enumerate(self.lp):
+                e = lp.peek()
+                lp.head_key = None if e is None else e.timestamp
+                if e is not None:
+                    self.heads.append((e.timestamp, i))
+                lp.tracks_head = True
+            heapq.heapify(self.heads)
+
+        heads = self.heads
+        while heads:
+            ts, i = heads[0]
+            lp = self.lp[i]
+            if ts != lp.head_key:
+                heapq.heappop(heads)
+                continue
             e = lp.peek()
             if e is None:
-                continue
-            if min_lp is None or e < min_lp.peek():
-                min_lp = lp
-        return min_lp
+                heapq.heappop(heads)
+                lp.head_key = None
+            elif e.timestamp == ts:
+                return lp
+            else:
+                lp.head_key = e.timestamp
+                heapq.heapreplace(heads, (e.timestamp, i))
+        return None
+
+    def head_added(self, lp) -> None:
+        """Called by an LP when an event is added at the front of its event list."""
+        lp.head_key = lp.event_list[0].timestamp
+        heapq.heappush(self.heads, (lp.head_key, lp.pe_index))
 
     def next_event(self) -> Event:
         lp = self.peek()

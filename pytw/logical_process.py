@@ -35,9 +35,13 @@ class LogicalProcess:
         self.current = None
         self.rollbacks = 0
         self.events_rolled_back = 0
+        # set by the PE once it tracks LP heads (see ProcessingElement.peek)
+        self.tracks_head = False
 
     def add_event(self, e: Event):
         heapq.heappush(self.event_list, e)
+        if self.tracks_head and self.event_list[0] is e:
+            self.pe.head_added(self)
 
     def receive(self, e: Event):
         """Add a delivered event, first rolling back if it is a straggler."""
