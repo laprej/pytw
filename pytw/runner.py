@@ -7,6 +7,7 @@ Model options are generated from the keyword arguments (with defaults) of the
 model's constructor, e.g. Phold(..., start_events=5) becomes --start-events.
 Pass --model <name> --help to see them.
 """
+
 import argparse
 import inspect
 import time

@@ -5,6 +5,7 @@ implementation.  Each LP starts with a number of events; every event processed
 schedules exactly one new event, either to itself or (with probability
 percent_remote) to a uniformly random LP, at now + lookahead + Exp(mean).
 """
+
 from pytw.event import Event
 from pytw.logical_process import LogicalProcess
 from pytw.model import Model
