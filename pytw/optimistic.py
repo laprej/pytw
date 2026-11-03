@@ -1,40 +1,51 @@
 import math
 
+from mpi4py import MPI
+
 from pytw.engine import Engine
 
 
 class Optimistic(Engine):
-    """Time Warp on a single rank.
+    """Time Warp, on one or more MPI ranks.
 
-    Rather than processing events in global timestamp order, LPs take turns
-    processing up to `batch` events each, so an LP can run ahead of the others and
-    receive stragglers from LPs that are behind it.  Stragglers and cancellations
-    roll the LP back (see LogicalProcess.rollback).  GVT is recomputed after every
-    round of turns; processed events older than GVT are fossil collected, and the
-    run ends once GVT reaches end_time.
+    Rather than processing events in global timestamp order, each rank's LPs take
+    turns processing up to `batch` events each, so an LP can run ahead of the
+    others and receive stragglers from LPs that are behind it.  Stragglers and
+    cancellations roll the LP back (see LogicalProcess.rollback).  GVT is
+    recomputed after every round of turns; processed events older than GVT are
+    fossil collected, and the run ends once GVT reaches end_time.
     """
 
     def __init__(self, batch: int = 8) -> None:
         super().__init__("Optimistic")
         self.batch = batch
-        # most processed events held across all LPs at once, i.e. the rollback window
+        # most processed events held across this rank's LPs at once, i.e. the rollback window
         self.peak_history = 0
 
-        if self.size > 1:
-            # multiple ranks need a distributed GVT algorithm
-            self.comm.Abort()
-
     def gvt(self, pe) -> float:
-        """Lowest timestamp of any unprocessed event."""
-        # on a single rank nothing is in transit once the buffer has been delivered
-        pe.deliver()
-        return min((e.timestamp for lp in pe.lp if (e := lp.peek()) is not None), default=math.inf)
+        """Lowest timestamp of any unprocessed event on any rank.
+
+        Blocking, as in ROSS's MPI_Allreduce GVT: every rank stops processing and
+        keeps sending and receiving until every message sent anywhere has been
+        received, so none are in transit.  Received stragglers and anti-messages can
+        cause rollbacks that send further anti-messages, hence the loop.
+        """
+        while True:
+            pe.deliver()
+            pe.poll()
+            if self.comm.allreduce(pe.msgs_sent - pe.msgs_recvd) == 0:
+                break
+        pe.complete_sends()
+
+        lvt = min((e.timestamp for lp in pe.lp if (e := lp.peek()) is not None), default=math.inf)
+        return self.comm.allreduce(lvt, op=MPI.MIN)
 
     def run(self, pe, end_time: float) -> int:
         """Run until GVT reaches end_time.
 
         Returns:
-            int: The number of committed events, i.e. processed and not rolled back.
+            int: The number of committed events across all ranks, i.e. processed and
+            not rolled back.
         """
         while True:
             gvt = self.gvt(pe)
@@ -45,6 +56,7 @@ class Optimistic(Engine):
                 break
 
             for lp in pe.lp:
+                pe.poll()
                 for _ in range(self.batch):
                     e = lp.peek()
                     if e is None or e.timestamp >= end_time:
@@ -54,4 +66,4 @@ class Optimistic(Engine):
                     lp.forward(e)
                     pe.deliver()
 
-        return sum(lp.events_processed for lp in pe.lp)
+        return self.comm.allreduce(sum(lp.events_processed for lp in pe.lp))

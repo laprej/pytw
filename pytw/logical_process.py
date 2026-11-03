@@ -90,7 +90,8 @@ class LogicalProcess:
         """Undo processed events newer than ts (or at ts, if inclusive), newest first.
 
         Each undone event goes back in the event list and the events it sent are
-        cancelled, which may in turn roll back their destination LPs.
+        cancelled, which may in turn roll back their destination LPs (on this rank
+        directly, on others by anti-message).
         """
         self.rollbacks += 1
         while self.processed and (
@@ -103,7 +104,7 @@ class LogicalProcess:
             self.add_event(e)
             sent, e.sent = e.sent, []
             for s in sent:
-                self.pe.lp_map[s.dst_lp].cancel(s)
+                self.pe.cancel(s)
         self.now = self.processed[-1].timestamp if self.processed else 0.0
 
     def fossil_collect(self, gvt: float):
@@ -116,6 +117,9 @@ class LogicalProcess:
             # drop references so the saved RNG state and sent events can be freed
             e.rng_state = None
             e.sent = []
+            if e.uid is not None:
+                # committed, so no anti-message can arrive for it
+                self.pe.remote_events.pop(e.uid, None)
         del self.processed[:i]
 
     def cancel(self, e: Event):

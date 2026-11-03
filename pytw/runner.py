@@ -2,6 +2,7 @@
 
 Usage:
     python -m pytw.runner --model phold --nlps 64 --end 200 --percent-remote 0.5
+    mpiexec -n 4 pytw --model phold --engine optimistic --nlps 64 --end 200
 
 Model options are generated from the keyword arguments (with defaults) of the
 model's constructor, e.g. Phold(..., start_events=5) becomes --start-events.
@@ -12,6 +13,8 @@ Pass --model <name> [--engine <name>] --help to see them.
 import argparse
 import inspect
 import time
+
+from mpi4py import MPI
 
 from pytw.logical_process import LogicalProcess as LP
 from pytw.models.phold import Phold, PholdState
@@ -55,7 +58,10 @@ def add_ctor_args(parser, cls):
 def build(model_cls, state_cls, nlps, seed, model_kwargs, engine=None):
     engine = engine or Sequential()
     pe = ProcessingElement(engine)
+    # each rank builds only its own LPs; seeds depend on the LP, not the rank
     for i in range(nlps):
+        if pe.rank_of(i) != pe.rank:
+            continue
         lp = LP(i, pe, seed=seed * nlps + i)
         pe.add_lp(lp)
         model_cls(state_cls(), lp, nlps, **model_kwargs)
@@ -83,33 +89,42 @@ def main(argv=None):
         add_ctor_args(parser, MODELS[known.model][0])
     add_ctor_args(parser, ENGINES[known.engine])
     args = parser.parse_args(argv)
+    comm = MPI.COMM_WORLD
+    if args.engine == "sequential" and comm.Get_size() > 1:
+        parser.error("the sequential engine runs on a single rank")
+    # every rank runs the simulation; only rank 0 reports
+    log = print if comm.Get_rank() == 0 else lambda *a, **k: None
 
     model_cls, state_cls = MODELS[args.model]
     model_kwargs = {name: getattr(args, name) for name, _ in ctor_params(model_cls)}
     engine_cls = ENGINES[args.engine]
     engine_kwargs = {name: getattr(args, name) for name, _ in ctor_params(engine_cls)}
-    print(
-        f"{args.model} on {args.engine}: nlps={args.nlps} end={args.end} seed={args.seed} "
+    log(
+        f"{args.model} on {args.engine}, {comm.Get_size()} rank(s): nlps={args.nlps} end={args.end} seed={args.seed} "
         + " ".join(f"{k}={v}" for k, v in (model_kwargs | engine_kwargs).items())
     )
 
     rates = []
     for i in range(args.repeat):
         engine, pe = build(model_cls, state_cls, args.nlps, args.seed, model_kwargs, engine_cls(**engine_kwargs))
+        comm.Barrier()
         t = time.perf_counter()
         n = engine.run(pe, args.end)
-        dt = time.perf_counter() - t
+        # the run takes as long as its slowest rank
+        dt = comm.allreduce(time.perf_counter() - t, op=MPI.MAX)
         rates.append(n / dt)
-        print(f"run {i + 1}: {n} events in {dt:.3f}s = {n / dt:,.0f} ev/s")
+        log(f"run {i + 1}: {n} events in {dt:.3f}s = {n / dt:,.0f} ev/s")
         if isinstance(engine, Optimistic):
-            rolled_back = sum(lp.events_rolled_back for lp in pe.lp)
-            print(
-                f"       {sum(lp.rollbacks for lp in pe.lp)} rollbacks, {rolled_back} events rolled back, "
-                f"efficiency {n / (n + rolled_back):.1%}, peak history {engine.peak_history} events"
+            rollbacks = comm.allreduce(sum(lp.rollbacks for lp in pe.lp))
+            rolled_back = comm.allreduce(sum(lp.events_rolled_back for lp in pe.lp))
+            peak = comm.allreduce(engine.peak_history, op=MPI.MAX)
+            log(
+                f"       {rollbacks} rollbacks, {rolled_back} events rolled back, "
+                f"efficiency {n / (n + rolled_back):.1%}, peak history {peak} events/rank"
             )
 
     if args.repeat > 1:
-        print(f"best {max(rates):,.0f} ev/s, mean {sum(rates) / len(rates):,.0f} ev/s")
+        log(f"best {max(rates):,.0f} ev/s, mean {sum(rates) / len(rates):,.0f} ev/s")
 
 
 if __name__ == "__main__":
