@@ -12,9 +12,9 @@ from .test_pe import PE
 
 
 def test_seq(PE):
-    prev = PE.process_event()
+    prev = PE.next_event()
 
-    while last := PE.process_event():
+    while last := PE.next_event():
         assert prev.timestamp <= last.timestamp
         prev = last
 
