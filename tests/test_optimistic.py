@@ -28,12 +28,13 @@ def snapshot(pe):
     }
 
 
+@pytest.mark.parametrize("gvt_interval", [1, 4])
 @pytest.mark.parametrize("batch", [1, 8, 64])
 @pytest.mark.parametrize("remote", [0.0, 0.25, 1.0])
-def test_matches_sequential(batch, remote):
+def test_matches_sequential(batch, remote, gvt_interval):
     """Rollbacks must leave every LP exactly where the sequential engine does."""
     seq_engine, seq_pe = build(percent_remote=remote)
-    opt_engine, opt_pe = build(Optimistic(batch=batch), percent_remote=remote)
+    opt_engine, opt_pe = build(Optimistic(batch=batch, gvt_interval=gvt_interval), percent_remote=remote)
 
     assert opt_engine.run(opt_pe, 50.0) == seq_engine.run(seq_pe, 50.0)
     assert snapshot(opt_pe) == snapshot(seq_pe)
@@ -71,8 +72,8 @@ def test_fossil_collection_bounds_history():
 
 @pytest.mark.skipif(shutil.which("mpiexec") is None, reason="needs mpiexec")
 @pytest.mark.parametrize("ranks", [2, 4])
-@pytest.mark.parametrize("batch, remote", [(8, 0.25), (1, 1.0)])
-def test_mpi_matches_sequential(tmp_path, ranks, batch, remote):
+@pytest.mark.parametrize("batch, remote, gvt_interval", [(8, 0.25, 1), (1, 1.0, 1), (8, 0.25, 4)])
+def test_mpi_matches_sequential(tmp_path, ranks, batch, remote, gvt_interval):
     """Across ranks, with events and anti-messages over MPI, every LP still ends where sequential does."""
     out = tmp_path / "snapshot.pkl"
     subprocess.run(
@@ -87,6 +88,7 @@ def test_mpi_matches_sequential(tmp_path, ranks, batch, remote):
             str(batch),
             str(remote),
             "50",
+            str(gvt_interval),
         ],
         check=True,
         timeout=120,
@@ -99,3 +101,18 @@ def test_mpi_matches_sequential(tmp_path, ranks, batch, remote):
     seq_engine, seq_pe = build(percent_remote=remote)
     assert committed == seq_engine.run(seq_pe, 50.0)
     assert lps == snapshot(seq_pe)
+
+
+def test_gvt_interval_holds_more_history():
+    """Fossil collection only happens at GVT, so a longer interval keeps more history."""
+    peaks = []
+    for interval in (1, 8):
+        engine, pe = build(Optimistic(gvt_interval=interval))
+        engine.run(pe, 100.0)
+        peaks.append(engine.peak_history)
+    assert peaks[1] > peaks[0]
+
+
+def test_bad_gvt_interval():
+    with pytest.raises(ValueError):
+        Optimistic(gvt_interval=0)

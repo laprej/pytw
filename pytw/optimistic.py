@@ -12,13 +12,18 @@ class Optimistic(Engine):
     turns processing up to `batch` events each, so an LP can run ahead of the
     others and receive stragglers from LPs that are behind it.  Stragglers and
     cancellations roll the LP back (see LogicalProcess.rollback).  GVT is
-    recomputed after every round of turns; processed events older than GVT are
-    fossil collected, and the run ends once GVT reaches end_time.
+    recomputed after every `gvt_interval` rounds of turns; processed events older
+    than GVT are fossil collected, and the run ends once GVT reaches end_time.
+    A longer interval means fewer blocking GVT computations, but more history
+    held between them.
     """
 
-    def __init__(self, batch: int = 8) -> None:
+    def __init__(self, batch: int = 8, gvt_interval: int = 1) -> None:
         super().__init__("Optimistic")
         self.batch = batch
+        self.gvt_interval = gvt_interval
+        if batch < 1 or gvt_interval < 1:
+            raise ValueError("batch and gvt_interval must be at least 1")
         # most processed events held across this rank's LPs at once, i.e. the rollback window
         self.peak_history = 0
 
@@ -55,15 +60,16 @@ class Optimistic(Engine):
             if gvt >= end_time:
                 break
 
-            for lp in pe.lp:
-                pe.poll()
-                for _ in range(self.batch):
-                    e = lp.peek()
-                    if e is None or e.timestamp >= end_time:
-                        break
-                    lp.next_event()
-                    lp.now = e.timestamp
-                    lp.forward(e)
-                    pe.deliver()
+            for _ in range(self.gvt_interval):
+                for lp in pe.lp:
+                    pe.poll()
+                    for _ in range(self.batch):
+                        e = lp.peek()
+                        if e is None or e.timestamp >= end_time:
+                            break
+                        lp.next_event()
+                        lp.now = e.timestamp
+                        lp.forward(e)
+                        pe.deliver()
 
         return self.comm.allreduce(sum(lp.events_processed for lp in pe.lp))
