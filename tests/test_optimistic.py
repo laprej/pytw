@@ -47,4 +47,17 @@ def test_gvt_reaches_end():
     engine, pe = build(Optimistic())
     engine.run(pe, 50.0)
     assert engine.gvt(pe) >= 50.0
-    assert all(e.timestamp < 50.0 for lp in pe.lp for e in lp.processed)
+    # everything processed is older than the final GVT, so it has all been committed
+    assert all(not lp.processed for lp in pe.lp)
+
+
+def test_fossil_collection_bounds_history():
+    """The rollback window stays the same size however long the run is."""
+    peaks = []
+    for end in (100.0, 400.0):
+        engine, pe = build(Optimistic())
+        committed = engine.run(pe, end)
+        peaks.append(engine.peak_history)
+    assert committed > 3 * peaks[1]
+    # without fossil collection the peak would grow with the run, about 4x here
+    assert peaks[1] < 1.5 * peaks[0]

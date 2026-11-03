@@ -105,7 +105,7 @@ def main(argv=None):
             rolled_back = sum(lp.events_rolled_back for lp in pe.lp)
             print(
                 f"       {sum(lp.rollbacks for lp in pe.lp)} rollbacks, {rolled_back} events rolled back, "
-                f"efficiency {n / (n + rolled_back):.1%}"
+                f"efficiency {n / (n + rolled_back):.1%}, peak history {engine.peak_history} events"
             )
 
     if args.repeat > 1:

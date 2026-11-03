@@ -10,12 +10,15 @@ class Optimistic(Engine):
     processing up to `batch` events each, so an LP can run ahead of the others and
     receive stragglers from LPs that are behind it.  Stragglers and cancellations
     roll the LP back (see LogicalProcess.rollback).  GVT is recomputed after every
-    round of turns and the run ends once it reaches end_time.
+    round of turns; processed events older than GVT are fossil collected, and the
+    run ends once GVT reaches end_time.
     """
 
     def __init__(self, batch: int = 8) -> None:
         super().__init__("Optimistic")
         self.batch = batch
+        # most processed events held across all LPs at once, i.e. the rollback window
+        self.peak_history = 0
 
         if self.size > 1:
             # multiple ranks need a distributed GVT algorithm
@@ -33,7 +36,14 @@ class Optimistic(Engine):
         Returns:
             int: The number of committed events, i.e. processed and not rolled back.
         """
-        while self.gvt(pe) < end_time:
+        while True:
+            gvt = self.gvt(pe)
+            self.peak_history = max(self.peak_history, sum(len(lp.processed) for lp in pe.lp))
+            for lp in pe.lp:
+                lp.fossil_collect(gvt)
+            if gvt >= end_time:
+                break
+
             for lp in pe.lp:
                 for _ in range(self.batch):
                     e = lp.peek()

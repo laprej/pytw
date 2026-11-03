@@ -1,3 +1,4 @@
+import bisect
 import heapq
 import random
 
@@ -104,6 +105,18 @@ class LogicalProcess:
             for s in sent:
                 self.pe.lp_map[s.dst_lp].cancel(s)
         self.now = self.processed[-1].timestamp if self.processed else 0.0
+
+    def fossil_collect(self, gvt: float):
+        """Discard processed events older than gvt; they can never be rolled back.
+
+        self.processed is in nondecreasing timestamp order, so they form a prefix.
+        """
+        i = bisect.bisect_left(self.processed, gvt, key=lambda e: e.timestamp)
+        for e in self.processed[:i]:
+            # drop references so the saved RNG state and sent events can be freed
+            e.rng_state = None
+            e.sent = []
+        del self.processed[:i]
 
     def cancel(self, e: Event):
         """Cancel an event sent to this LP, rolling it back first if it was processed."""
