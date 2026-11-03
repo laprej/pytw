@@ -44,4 +44,5 @@ class ProcessingElement(MPIBase):
         """Move buffered events into their destination LP's event list."""
         while not self.buffer.empty():
             e = self.buffer.get()
-            self.lp_map[e.dst_lp].add_event(e)
+            if not e.cancelled:
+                self.lp_map[e.dst_lp].receive(e)

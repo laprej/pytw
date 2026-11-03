@@ -15,6 +15,11 @@ class Event:
         self.rng_state = None
         # number of remote events sent while processing this event, undone on rollback
         self.remote_sent = 0
+        # events sent while processing this event, cancelled on rollback
+        self.sent: list[Event] = []
+        self.processed = False
+        # set when the sender rolls back; cancelled events are skipped, never processed
+        self.cancelled = False
 
     def __lt__(self, other):
         if other is None:
