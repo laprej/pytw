@@ -1,9 +1,9 @@
 import bisect
 import heapq
-import random
 
 from pytw.event import Event
 from pytw.processing_element import ProcessingElement
+from pytw.rng import SplitMix64
 
 
 class LogicalProcess:
@@ -23,8 +23,9 @@ class LogicalProcess:
         self.now = 0.0
         self.model = None
         # per-LP stream so results don't depend on event interleaving across LPs;
-        # defaults to the LP id so runs are reproducible
-        self.rng = random.Random(lpid if seed is None else seed)
+        # defaults to the LP id so runs are reproducible.  SplitMix64's state is one int,
+        # so saving it before every event for rollback is cheap
+        self.rng = SplitMix64(lpid if seed is None else seed)
         self.events_processed = 0
         # events sent to an LP other than this one
         self.events_sent_remote = 0
