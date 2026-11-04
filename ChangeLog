@@ -1,0 +1,93 @@
+CHANGES
+=======
+
+0.3.2
+-----
+
+* Simplify Event timestamp handling
+
+0.3.1
+-----
+
+* Update diagram to Mermaid
+* Update bullet points in README.md for clarity
+
+0.3.0
+-----
+
+* Add Airport model and tests
+
+0.2.0
+-----
+
+* Execute events in timestamp order
+* Use SplitMix64 instead of random.Random
+* Add GVT interval
+* Add MPI support
+* Add fossil collection
+* Start optimistic engine with rollback support
+
+0.1.2
+-----
+
+* pytest was failing on test\_seq
+
+0.1.1
+-----
+
+* [pre-commit.ci] auto fixes from pre-commit.com hooks
+* [pre-commit.ci] pre-commit autoupdate
+
+0.1.0
+-----
+
+* Remove super-linter
+* Update pre-commit
+* Update README
+* phold is now complete
+* Put Claude to work!
+* update pre-commit hooks to latest versions
+* making progress
+* Remove src\_lp assertion
+* improved a few things
+* add models/\_\_init\_\_.py
+* add pytw/README
+* add test\_phold.py
+* not passing pytest
+* add more network.py functionality
+* update quite a few files for typing purposes
+* remove methods from Engine and subclasses
+* rework the class organization a bit
+* add state and lp to event\_handler method
+* add state.py
+* Revert "update super-linter.yml"
+* update super-linter.yml
+* update super-linter.yml
+* update super-linter.yml
+* add super-linter.yml
+* add model starter
+* set entry\_points
+* add click to requirements.txt
+* decent progress
+* add \_\_init\_\_.py to tests
+* move PE fixture
+* fix sequential.py
+* move logic to make more sense
+* add ABC for model and phold
+* Update setup.cfg
+* Update README.md
+* Update setup.cfg
+* Create PBR.md
+* Update README.md
+* add pytw/\_\_init\_\_.py
+* add sequential and tests
+* add mpi4py to other engines
+* add empty test files
+* add test\_{event,pe}
+* add misc. code across many files
+* add all run type skeletons
+* add engine.py
+* add test\_lp
+* start project
+* add initial setup.\* files
+* Initial commit
