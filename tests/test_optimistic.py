@@ -1,37 +1,13 @@
-import pickle
-import shutil
-import subprocess
-import sys
-import warnings
-from pathlib import Path
-
 import pytest
 
 from pytw.models.phold import Phold, PholdState
 from pytw.optimistic import Optimistic
 from pytw.runner import build as runner_build
-
-HAVE_MPIEXEC = shutil.which("mpiexec") is not None
-if not HAVE_MPIEXEC:
-    # a plain skip is easy to miss, and these are the only tests that exercise rollback
-    warnings.warn("mpiexec not found: skipping the MPI tests, so rollback between ranks is untested")
+from tests.mpi_snapshot import requires_mpiexec, run_mpi, snapshot
 
 
 def build(engine=None, nlps=16, seed=0, **kwargs):
     return runner_build(Phold, PholdState, nlps, seed, kwargs, engine)
-
-
-def snapshot(pe):
-    """Everything a correct run's result depends on, by LP id."""
-    return {
-        lp.lp_id: (
-            lp.events_processed,
-            lp.events_sent_remote,
-            lp.rng.getstate(),
-            sorted(e.timestamp for e in lp.event_list if not e.cancelled),
-        )
-        for lp in pe.lp
-    }
 
 
 @pytest.mark.parametrize("gvt_interval", [1, 4])
@@ -67,33 +43,14 @@ def test_fossil_collection_bounds_history():
     assert peaks[1] < 1.5 * peaks[0]
 
 
-@pytest.mark.skipif(not HAVE_MPIEXEC, reason="needs mpiexec")
+@requires_mpiexec
 @pytest.mark.parametrize("ranks", [2, 4])
 @pytest.mark.parametrize("batch, remote, gvt_interval", [(16, 0.25, 16), (1, 1.0, 1), (64, 0.25, 4)])
 def test_mpi_matches_sequential(tmp_path, ranks, batch, remote, gvt_interval):
     """Stragglers and anti-messages between ranks still leave every LP where sequential does."""
-    out = tmp_path / "snapshot.pkl"
-    subprocess.run(
-        [
-            "mpiexec",
-            "-n",
-            str(ranks),
-            sys.executable,
-            "-m",
-            "tests.mpi_snapshot",
-            str(out),
-            str(batch),
-            str(remote),
-            "50",
-            str(gvt_interval),
-        ],
-        check=True,
-        timeout=120,
-        # so -m tests.mpi_snapshot resolves wherever pytest was started
-        cwd=Path(__file__).parent.parent,
+    committed, rolled_back, lps = run_mpi(
+        tmp_path, ranks, "phold", 16, 50.0, batch, gvt_interval, percent_remote=remote
     )
-    with open(out, "rb") as f:
-        committed, rolled_back, lps = pickle.load(f)
     # otherwise the test isn't exercising rollback at all
     assert rolled_back > 0
 

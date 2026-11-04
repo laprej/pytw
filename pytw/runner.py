@@ -17,6 +17,7 @@ import time
 from mpi4py import MPI
 
 from pytw.logical_process import LogicalProcess as LP
+from pytw.models.airport import Airport, AirportState
 from pytw.models.phold import Phold, PholdState
 from pytw.optimistic import Optimistic
 from pytw.processing_element import ProcessingElement
@@ -25,6 +26,7 @@ from pytw.sequential import Sequential
 # name -> (model class, state class)
 MODELS = {
     "phold": (Phold, PholdState),
+    "airport": (Airport, AirportState),
 }
 
 ENGINES = {
