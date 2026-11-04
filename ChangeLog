@@ -1,6 +1,16 @@
 CHANGES
 =======
 
+0.3.4
+-----
+
+* Add --version flag
+
+0.3.3
+-----
+
+* Add ChangeLog file
+
 0.3.2
 -----
 

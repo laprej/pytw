@@ -11,6 +11,7 @@ Pass --model <name> [--engine <name>] --help to see them.
 """
 
 import argparse
+import importlib.metadata
 import inspect
 import time
 
@@ -70,8 +71,17 @@ def build(model_cls, state_cls, nlps, seed, model_kwargs, engine=None):
     return engine, pe
 
 
+def version():
+    try:
+        return importlib.metadata.version("pytw")
+    except importlib.metadata.PackageNotFoundError:
+        # running from a checkout that was never installed
+        return "unknown"
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Run a pytw model and report its event rate.")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {version()}")
     parser.add_argument("--model", required=True, choices=MODELS, help="model to run")
     parser.add_argument(
         "--engine", default="sequential", choices=ENGINES, help="simulation engine (default: %(default)s)"
