@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from mpi4py import MPI
 
 from pytw.event import Event
-from pytw.processing_element import ProcessingElement as PE
 
 
 @dataclass

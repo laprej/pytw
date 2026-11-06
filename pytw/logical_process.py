@@ -139,7 +139,7 @@ class LogicalProcess:
         Args:
             e (Event): Event to send.
         """
-        assert e.dst_lp != None
+        assert e.dst_lp is not None
 
         e.src_lp = self.lp_id
         if self.current is not None:
