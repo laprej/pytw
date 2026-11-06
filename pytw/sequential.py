@@ -1,6 +1,4 @@
 from pytw.engine import Engine
-from pytw.event import Event
-from pytw.mpi import MPIBase
 
 
 class Sequential(Engine):

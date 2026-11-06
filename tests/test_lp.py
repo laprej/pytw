@@ -1,5 +1,4 @@
 import random
-from sys import float_info
 
 import pytest
 

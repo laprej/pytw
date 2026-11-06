@@ -1,8 +1,5 @@
 import random
 
-from pytw.engine import Engine
-from pytw.logical_process import LogicalProcess
-
 
 class BaseModel:
     endtime = 10
