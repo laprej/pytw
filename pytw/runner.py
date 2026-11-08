@@ -3,6 +3,7 @@
 Usage:
     python -m pytw.runner --model phold --nlps 64 --end 200 --percent-remote 0.5
     mpiexec -n 4 pytw --model phold --engine optimistic --nlps 64 --end 200
+    mpiexec -n 4 pytw --model airport --engine conservative --nlps 64 --end 200
 
 Model options are generated from the keyword arguments (with defaults) of the
 model's constructor, e.g. Phold(..., start_events=5) becomes --start-events.
@@ -17,6 +18,7 @@ import time
 
 from mpi4py import MPI
 
+from pytw.conservative import Conservative
 from pytw.logical_process import LogicalProcess as LP
 from pytw.models.airport import Airport, AirportState
 from pytw.models.phold import Phold, PholdState
@@ -32,6 +34,7 @@ MODELS = {
 
 ENGINES = {
     "sequential": Sequential,
+    "conservative": Conservative,
     "optimistic": Optimistic,
 }
 
@@ -134,6 +137,9 @@ def main(argv=None):
                 f"       {rollbacks} rollbacks, {rolled_back} events rolled back, "
                 f"efficiency {n / (n + rolled_back):.1%}, peak history {peak} events/rank"
             )
+        elif isinstance(engine, Conservative):
+            windows = engine.windows
+            log(f"       {windows} windows of lookahead {engine.lookahead}, {n / max(windows, 1):,.1f} events/window")
 
     if args.repeat > 1:
         log(f"best {max(rates):,.0f} ev/s, mean {sum(rates) / len(rates):,.0f} ev/s")

@@ -84,7 +84,9 @@ def test_optimistic_matches_sequential(batch, gvt_interval):
 @pytest.mark.parametrize("ranks", [2, 4])
 def test_mpi_matches_sequential(tmp_path, ranks):
     """Rollbacks undo real model state here, unlike PHOLD, and must still match sequential."""
-    committed, rolled_back, lps = run_mpi(tmp_path, ranks, "airport", 16, 200.0, 16, 16)
+    committed, rolled_back, lps = run_mpi(
+        tmp_path, ranks, "optimistic", "airport", 16, 200.0, batch=16, gvt_interval=16
+    )
     # otherwise the test isn't exercising rollback at all
     assert rolled_back > 0
 
