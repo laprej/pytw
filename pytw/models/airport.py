@@ -68,6 +68,8 @@ class Airport(Model):
         self.ground_time = ground_time
         self.min_flight_time = min_flight_time
         self.mean_flight_time = mean_flight_time
+        # aircraft only leave for another airport by flying there
+        self.lookahead = min_flight_time
         self.handlers = {
             Arrival: (self.arrival, self.reverse_arrival),
             Landed: (self.landed, self.reverse_landed),

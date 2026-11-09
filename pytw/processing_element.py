@@ -36,6 +36,9 @@ class ProcessingElement(MPIBase):
         # (head timestamp, index into self.lp) per LP, so peek() needn't scan every LP;
         # built on the first peek(), since only the sequential engine uses it
         self.heads = None
+        # set by the conservative engine while it runs: the least delay allowed on an
+        # event sent to another LP
+        self.lookahead = None
 
     def rank_of(self, lp_id) -> int:
         return 0 if self.size == 1 else lp_id % self.size
@@ -104,12 +107,22 @@ class ProcessingElement(MPIBase):
             e = self.buffer.get()
             if e.cancelled:
                 continue
+            if self.lookahead is not None and e.dst_lp != e.src_lp:
+                self._check_lookahead(e)
             if e.dst_lp in self.lp_map:
                 self.lp_map[e.dst_lp].receive(e)
             else:
                 e.uid = (self.rank, next(self.uids))
                 e.transmitted = True
                 self._send(e, self.rank_of(e.dst_lp))
+
+    def _check_lookahead(self, e: Event) -> None:
+        src = self.lp_map[e.src_lp]
+        if e.timestamp < src.now + self.lookahead:
+            raise RuntimeError(
+                f"LP {e.src_lp} sent an event to LP {e.dst_lp} at {e.timestamp} from time {src.now}, "
+                f"less than the lookahead {self.lookahead} later"
+            )
 
     def cancel(self, e: Event) -> None:
         """Cancel an event sent by one of this PE's LPs."""

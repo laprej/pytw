@@ -49,7 +49,7 @@ def test_fossil_collection_bounds_history():
 def test_mpi_matches_sequential(tmp_path, ranks, batch, remote, gvt_interval):
     """Stragglers and anti-messages between ranks still leave every LP where sequential does."""
     committed, rolled_back, lps = run_mpi(
-        tmp_path, ranks, "phold", 16, 50.0, batch, gvt_interval, percent_remote=remote
+        tmp_path, ranks, "optimistic", "phold", 16, 50.0, batch=batch, gvt_interval=gvt_interval, percent_remote=remote
     )
     # otherwise the test isn't exercising rollback at all
     assert rolled_back > 0
